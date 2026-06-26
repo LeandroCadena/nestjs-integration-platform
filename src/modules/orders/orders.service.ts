@@ -3,6 +3,7 @@ import { CorrelationIdService } from '@/shared/correlation/correlation-id.servic
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ORDERS_REPOSITORY } from './interfaces/orders.repository.interface';
 import type { OrdersRepository } from './interfaces/orders.repository.interface';
+import { QueueService } from '@/queues/queue.service';
 
 @Injectable()
 export class OrdersService {
@@ -10,12 +11,20 @@ export class OrdersService {
     @Inject(ORDERS_REPOSITORY)
     private readonly ordersRepository: OrdersRepository,
     private readonly correlationIdService: CorrelationIdService,
+    private readonly queueService: QueueService,
   ) {}
 
-  create(createOrderDto: CreateOrderDto) {
+  async create(createOrderDto: CreateOrderDto) {
     const correlationId = this.correlationIdService.generate();
 
-    return this.ordersRepository.create(createOrderDto, correlationId);
+    const order = await this.ordersRepository.create(createOrderDto, correlationId);
+
+    await this.queueService.addPaymentJob({
+      orderId: order.id,
+      correlationId,
+    });
+
+    return order;
   }
 
   findAll() {
