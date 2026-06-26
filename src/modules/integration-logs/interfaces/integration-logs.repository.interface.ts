@@ -1,4 +1,4 @@
-import type { IntegrationLog, Prisma } from '../../../../generated/prisma';
+import type { IntegrationLog, Prisma } from '@prisma/client';
 
 export const INTEGRATION_LOGS_REPOSITORY = Symbol('INTEGRATION_LOGS_REPOSITORY');
 

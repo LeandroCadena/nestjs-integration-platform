@@ -1,4 +1,4 @@
-import type { Payment } from '../../../../generated/prisma';
+import type { Payment } from '@prisma/client';
 
 export const PAYMENTS_REPOSITORY = Symbol('PAYMENTS_REPOSITORY');
 

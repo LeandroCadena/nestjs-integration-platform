@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '@/database/prisma.service';
 
@@ -12,26 +13,28 @@ export class PrismaIntegrationLogsRepository implements IntegrationLogsRepositor
   constructor(private readonly prisma: PrismaService) {}
 
   create(data: CreateIntegrationLogData) {
-    return this.prisma.integrationLog.create({
-      data: {
-        provider: data.provider,
-        operation: data.operation,
-        status: data.status,
-        requestBody: data.requestBody,
-        responseBody: data.responseBody,
-        errorMessage: data.errorMessage,
-        latencyMs: data.latencyMs,
-        correlationId: data.correlationId,
-        ...(data.orderId
-          ? {
-              order: {
-                connect: {
-                  id: data.orderId,
-                },
+    const createData: Prisma.IntegrationLogCreateInput = {
+      provider: data.provider,
+      operation: data.operation,
+      status: data.status,
+      correlationId: data.correlationId,
+      ...(data.requestBody !== undefined ? { requestBody: data.requestBody } : {}),
+      ...(data.responseBody !== undefined ? { responseBody: data.responseBody } : {}),
+      ...(data.errorMessage !== undefined ? { errorMessage: data.errorMessage } : {}),
+      ...(data.latencyMs !== undefined ? { latencyMs: data.latencyMs } : {}),
+      ...(data.orderId
+        ? {
+            order: {
+              connect: {
+                id: data.orderId,
               },
-            }
-          : {}),
-      },
+            },
+          }
+        : {}),
+    };
+
+    return this.prisma.integrationLog.create({
+      data: createData,
     });
   }
 }

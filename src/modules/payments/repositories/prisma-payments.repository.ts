@@ -19,7 +19,7 @@ export class PrismaPaymentsRepository implements PaymentsRepository {
         amount: data.amount,
         currency: data.currency,
         idempotencyKey: data.idempotencyKey,
-        externalPaymentId: data.externalPaymentId,
+        externalPaymentId: data.externalPaymentId ?? null,
         status: 'SUCCEEDED',
       },
     });

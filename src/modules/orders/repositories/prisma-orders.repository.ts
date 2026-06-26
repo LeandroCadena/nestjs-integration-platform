@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { CreateOrderDto } from '../dto/create-order.dto';
 import { OrdersRepository } from '../interfaces/orders.repository.interface';
-import type { OrderStatus } from '../../../../generated/prisma';
+import type { OrderStatus } from '@prisma/client';
 
 @Injectable()
 export class PrismaOrdersRepository implements OrdersRepository {

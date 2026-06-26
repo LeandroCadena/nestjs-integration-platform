@@ -1,4 +1,4 @@
-import { Order, OrderStatus } from '../../../../generated/prisma';
+import { Order, OrderStatus } from '@prisma/client';
 import { CreateOrderDto } from '../dto/create-order.dto';
 
 export const ORDERS_REPOSITORY = Symbol('ORDERS_REPOSITORY');

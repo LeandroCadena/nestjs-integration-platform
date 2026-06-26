@@ -3,17 +3,17 @@ import { IsInt, IsNotEmpty, IsString, Min } from 'class-validator';
 export class CreateOrderDto {
   @IsString()
   @IsNotEmpty()
-  customerName: string;
+  customerName!: string;
 
   @IsInt()
   @Min(1)
-  amount: number;
+  amount!: number;
 
   @IsString()
   @IsNotEmpty()
-  currency: string;
+  currency!: string;
 
   @IsString()
   @IsNotEmpty()
-  idempotencyKey: string;
+  idempotencyKey!: string;
 }
