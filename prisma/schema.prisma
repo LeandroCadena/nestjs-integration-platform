@@ -38,17 +38,17 @@ model Order {
 }
 
 model Payment {
-  id             String        @id @default(uuid())
-  orderId         String
-  provider        String
-  amount          Int
-  currency        String
-  status          PaymentStatus @default(PENDING)
-  idempotencyKey  String        @unique
+  id                String        @id @default(uuid())
+  orderId           String
+  provider          String
+  amount            Int
+  currency          String
+  status            PaymentStatus @default(PENDING)
+  idempotencyKey    String        @unique
   externalPaymentId String?
-  errorMessage    String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  errorMessage      String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   order Order @relation(fields: [orderId], references: [id])
 }
@@ -70,12 +70,12 @@ model IntegrationLog {
 }
 
 model WebhookEvent {
-  id             String   @id @default(uuid())
-  provider       String
-  eventType      String
-  externalEventId String  @unique
-  payload        Json
-  processed      Boolean  @default(false)
-  correlationId  String
-  createdAt      DateTime @default(now())
+  id              String   @id @default(uuid())
+  provider        String
+  eventType       String
+  externalEventId String   @unique
+  payload         Json
+  processed       Boolean  @default(false)
+  correlationId   String
+  createdAt       DateTime @default(now())
 }

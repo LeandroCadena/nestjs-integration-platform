@@ -1,35 +1,31 @@
-// @ts-check
+// eslint.config.mjs
 import eslint from '@eslint/js';
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
-import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import prettier from 'eslint-config-prettier';
+import unusedImports from 'eslint-plugin-unused-imports';
 
 export default tseslint.config(
-  {
-    ignores: ['eslint.config.mjs'],
-  },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
-  eslintPluginPrettierRecommended,
-  {
+  prettier, {
     languageOptions: {
-      globals: {
-        ...globals.node,
-        ...globals.jest,
-      },
-      sourceType: 'commonjs',
       parserOptions: {
-        projectService: true,
+        project: './tsconfig.json',
         tsconfigRootDir: import.meta.dirname,
       },
     },
-  },
-  {
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn',
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
+    plugins: {
+      'unused-imports': unusedImports,
     },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/require-await': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'unused-imports/no-unused-imports': 'error',
+      'no-console': 'warn',
+    },
+  }, {
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'prisma/generated/**'],
   },
 );
