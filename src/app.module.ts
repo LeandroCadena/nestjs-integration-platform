@@ -7,11 +7,13 @@ import { CorrelationModule } from './shared/correlation/correlation.module';
 import { BullmqModule } from './queues/bullmq.module';
 import { PaymentWorkerModule } from './workers/payment/payment-worker.module';
 import { AppLoggerModule } from './shared/logger/logger.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
     AppConfigModule,
     AppLoggerModule,
+    HealthModule,
     PrismaModule,
     CorrelationModule,
     BullmqModule,
