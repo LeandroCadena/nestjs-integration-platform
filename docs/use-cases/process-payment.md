@@ -2,332 +2,183 @@
 
 ## Overview
 
-This use case describes how an order is processed after being created.
+This use case describes how the platform processes a payment after an order is created.
 
-The system follows an asynchronous event-driven architecture where order creation and payment processing are decoupled through a queue.
-
----
-
-# Business Goal
-
-Process a customer payment reliably while guaranteeing:
-
-- Idempotency
-- Retry capability
-- Traceability
-- Scalability
-- Observability
+The system uses an asynchronous event-driven flow. The Orders API is responsible for accepting and storing the order, while the Payment Worker processes the payment later through a queue.
 
 ---
 
-# Trigger
+## Business Goal
 
-An order is successfully created.
+Process customer payments reliably while keeping the API fast and resilient to external provider failures.
+
+---
+
+## Trigger
+
+An order is created through:
 
 ```http
 POST /orders
 ```
 
-The OrdersService stores the order and publishes a message to the payment queue.
+After persisting the order, the system publishes a job to:
 
----
-
-# Input
-
-| Field         | Type | Description                                           |
-| ------------- | ---- | ----------------------------------------------------- |
-| orderId       | UUID | Internal order identifier                             |
-| correlationId | UUID | Trace identifier propagated through the complete flow |
-
-Example
-
-```json
-{
-  "orderId": "4b94...",
-  "correlationId": "d80d..."
-}
-```
-
----
-
-# Architecture
-
-```text
-                Client
-
-                  │
-
-           POST /orders
-
-                  │
-
-         OrdersController
-
-                  │
-
-           OrdersService
-
-                  │
-
-        OrdersRepository
-
-                  │
-
-             PostgreSQL
-
-                  │
-
-           QueueService
-
-                  │
-
-          payment.queue
-
-                  │
-
-          PaymentWorker
-
-                  │
-
-       Fake Stripe Adapter
-
-                  │
-
-        PaymentsRepository
-
-                  │
-
-       IntegrationLogRepository
-```
-
----
-
-# Sequence
-
-## Step 1
-
-Persist the Order.
-
-Status:
-
-```
-PENDING
-```
-
----
-
-## Step 2
-
-Publish a job.
-
-Queue
-
-```
+```txt
 payment.queue
 ```
 
-Payload
+---
+
+## Input
 
 ```json
 {
-  "orderId": "...",
-  "correlationId": "..."
+  "orderId": "string",
+  "correlationId": "string"
 }
 ```
 
 ---
 
-## Step 3
+## Main Flow
 
-PaymentWorker receives the job.
-
-Validation:
-
-- job exists
-- job name is valid
-
----
-
-## Step 4
-
-Retrieve Order.
-
-If Order does not exist:
-
-```
-throw Error
-```
-
-BullMQ retry policy handles the retry.
+1. `OrdersController` receives the request.
+2. `OrdersService` creates a `correlationId`.
+3. `OrdersRepository` persists the order in PostgreSQL.
+4. `QueueService` publishes a `process-payment` job.
+5. `PaymentWorker` consumes the job.
+6. `PaymentWorker` loads the order from PostgreSQL.
+7. The order status changes to `PAYMENT_PROCESSING`.
+8. `FakeStripeAdapter` simulates the payment provider call.
+9. `PaymentsRepository` creates the payment record.
+10. The order status changes to `PAYMENT_SUCCEEDED`.
+11. `IntegrationLogsRepository` stores the provider request, response, latency and correlation ID.
 
 ---
 
-## Step 5
+## Sequence
 
-Update Order.
-
-```
-PAYMENT_PROCESSING
-```
-
----
-
-## Step 6
-
-Call external provider.
-
-Current implementation
-
-```
-Fake Stripe
-```
-
-Future implementations
-
-- Stripe
-- PayPal
-- Adyen
-- MercadoPago
-
----
-
-## Step 7
-
-Persist Payment.
-
-Fields
-
-- provider
-- amount
-- currency
-- idempotencyKey
-- externalPaymentId
-
-Status
-
-```
-SUCCEEDED
+```txt
+Client
+  |
+  v
+POST /orders
+  |
+  v
+OrdersController
+  |
+  v
+OrdersService
+  |
+  v
+OrdersRepository
+  |
+  v
+PostgreSQL
+  |
+  v
+QueueService
+  |
+  v
+payment.queue
+  |
+  v
+PaymentWorker
+  |
+  v
+FakeStripeAdapter
+  |
+  v
+PaymentsRepository
+  |
+  v
+IntegrationLogsRepository
 ```
 
 ---
 
-## Step 8
+## Retry Strategy
 
-Update Order.
+The payment job is configured with:
 
+```txt
+attempts: 3
+backoff: exponential
+delay: 1000ms
 ```
-PAYMENT_SUCCEEDED
+
+If the worker throws an exception, BullMQ retries the job.
+
+---
+
+## Idempotency
+
+The order includes an `idempotencyKey`.
+
+This key is sent to the payment provider and will be used to avoid duplicated payment records when retries or duplicate jobs happen.
+
+Current status:
+
+```txt
+Partially implemented
+```
+
+Future improvement:
+
+```txt
+Before creating a payment, verify if a payment already exists for the same idempotencyKey.
 ```
 
 ---
 
-## Step 9
+## Correlation ID
 
-Create IntegrationLog.
+The same `correlationId` must be propagated through:
 
-Store
-
-- provider
-- operation
-- request
-- response
-- latency
-- correlationId
-- status
-
----
-
-# Retry Strategy
-
-BullMQ configuration
-
-```text
-Attempts: 3
-
-Backoff:
-Exponential
-
-Initial Delay:
-1000 ms
-```
-
----
-
-# Idempotency
-
-The payment provider receives
-
-```
-idempotencyKey
-```
-
-If the same message is processed multiple times, only one payment should be created.
-
----
-
-# Correlation
-
-Every component propagates
-
-```
-correlationId
-```
-
-This allows searching logs across:
-
-- API
-- Queue
+- Order
+- Queue job
 - Worker
-- Payment Provider
-- Database
-- Integration Logs
+- Fake Stripe request
+- Payment
+- Integration log
+- Application logs
+
+This allows debugging the full flow using a single identifier.
 
 ---
 
-# Failure Scenarios
+## Success Criteria
 
-| Scenario          | Expected Behavior             |
-| ----------------- | ----------------------------- |
-| Order not found   | Throw exception               |
-| Queue unavailable | API returns error             |
-| Provider timeout  | Retry                         |
-| Provider error    | Retry                         |
-| Duplicate message | Ignore because of idempotency |
-| Unknown job       | Warning log                   |
+A successful execution must produce:
+
+```txt
+Order.status = PAYMENT_SUCCEEDED
+Payment.status = SUCCEEDED
+IntegrationLog.status = SUCCEEDED
+```
 
 ---
 
-# Future Improvements
+## Failure Scenarios
+
+| Scenario             | Expected Behavior                      |
+| -------------------- | -------------------------------------- |
+| Order does not exist | Worker throws error and job retries    |
+| Provider timeout     | Worker throws error and job retries    |
+| Provider error       | Worker throws error and job retries    |
+| Duplicate message    | Idempotency prevents duplicate payment |
+| Unknown job name     | Worker logs warning and ignores it     |
+
+---
+
+## Future Improvements
 
 - Real Stripe SDK
-- Circuit Breaker
 - Dead Letter Queue
-- Prometheus Metrics
-- Grafana Dashboard
-- OpenTelemetry
-- Distributed Tracing
-- Webhooks
-- Notifications
-- Outbox Pattern
-
----
-
-# Success Criteria
-
-A successful execution produces:
-
-- Order created
-- Payment created
-- Order updated
-- Integration Log stored
-- Same correlationId propagated across the entire flow
-
-```
-Order
-    ↓
-
-Payment
-    ↓
-
-IntegrationLog
-```
+- Circuit Breaker
+- Provider timeout handling
+- Metrics with Prometheus
+- Grafana dashboard
+- OpenTelemetry tracing
+- Payment webhook reconciliation
