@@ -24,4 +24,12 @@ export class PrismaPaymentsRepository implements PaymentsRepository {
       },
     });
   }
+
+  findByIdempotencyKey(idempotencyKey: string) {
+    return this.prisma.payment.findUnique({
+      where: {
+        idempotencyKey,
+      },
+    });
+  }
 }

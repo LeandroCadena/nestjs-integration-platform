@@ -12,5 +12,6 @@ export interface CreatePaymentData {
 }
 
 export interface PaymentsRepository {
+  findByIdempotencyKey(idempotencyKey: string): Promise<Payment | null>;
   createSucceededPayment(data: CreatePaymentData): Promise<Payment>;
 }

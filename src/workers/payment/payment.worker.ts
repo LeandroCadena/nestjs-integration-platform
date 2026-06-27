@@ -59,6 +59,26 @@ export class PaymentWorker extends WorkerHost {
       throw new Error(`Order not found: ${orderId}`);
     }
 
+    const existingPayment = await this.paymentsRepository.findByIdempotencyKey(
+      order.idempotencyKey,
+    );
+
+    if (existingPayment) {
+      this.logger.log(
+        {
+          orderId: order.id,
+          correlationId,
+          paymentId: existingPayment.id,
+          idempotencyKey: order.idempotencyKey,
+        },
+        'Payment already processed, skipping provider call',
+      );
+
+      await this.ordersRepository.updateStatus(order.id, 'PAYMENT_SUCCEEDED');
+
+      return;
+    }
+
     await this.ordersRepository.updateStatus(order.id, 'PAYMENT_PROCESSING');
 
     const paymentResult = await this.paymentProvider.processPayment({
