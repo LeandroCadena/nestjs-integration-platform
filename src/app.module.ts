@@ -6,10 +6,12 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { CorrelationModule } from './shared/correlation/correlation.module';
 import { BullmqModule } from './queues/bullmq.module';
 import { PaymentWorkerModule } from './workers/payment/payment-worker.module';
+import { AppLoggerModule } from './shared/logger/logger.module';
 
 @Module({
   imports: [
     AppConfigModule,
+    AppLoggerModule,
     PrismaModule,
     CorrelationModule,
     BullmqModule,

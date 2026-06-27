@@ -1,5 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { Logger } from 'nestjs-pino';
 import type { Job } from 'bullmq';
 
 import {
@@ -24,8 +25,6 @@ import type { ProcessPaymentJob } from '@/queues/queue.service';
 @Injectable()
 @Processor(PAYMENT_QUEUE)
 export class PaymentWorker extends WorkerHost {
-  private readonly logger = new Logger(PaymentWorker.name);
-
   constructor(
     @Inject(ORDERS_REPOSITORY)
     private readonly ordersRepository: OrdersRepository,
@@ -35,13 +34,19 @@ export class PaymentWorker extends WorkerHost {
     private readonly paymentsRepository: PaymentsRepository,
     @Inject(INTEGRATION_LOGS_REPOSITORY)
     private readonly integrationLogsRepository: IntegrationLogsRepository,
+    private readonly logger: Logger,
   ) {
     super();
   }
 
   async process(job: Job<ProcessPaymentJob>): Promise<void> {
     if (job.name !== QUEUE_JOB_NAMES.PROCESS_PAYMENT) {
-      this.logger.warn(`Unknown job received: ${job.name}`);
+      this.logger.warn(
+        {
+          jobName: job.name,
+        },
+        'Unknown payment job received',
+      );
       return;
     }
 
@@ -90,11 +95,15 @@ export class PaymentWorker extends WorkerHost {
       correlationId,
     });
 
-    this.logger.log({
-      message: 'Payment processed successfully',
-      orderId: order.id,
-      correlationId,
-      externalPaymentId: paymentResult.externalPaymentId,
-    });
+    this.logger.log(
+      {
+        orderId: order.id,
+        correlationId,
+        externalPaymentId: paymentResult.externalPaymentId,
+        provider: 'fake-stripe',
+        durationMs: Date.now() - startedAt,
+      },
+      'Payment processed successfully',
+    );
   }
 }
