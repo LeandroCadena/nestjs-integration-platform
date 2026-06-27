@@ -6,7 +6,9 @@ The format follows Keep a Changelog.
 
 ---
 
-## [Unreleased]
+## [0.1.0]
+
+Initial foundation release.
 
 ### Added
 
@@ -22,6 +24,17 @@ The format follows Keep a Changelog.
 
 ---
 
-## [0.1.0]
+## [0.1.0] - 2026-06-27
 
-Initial foundation release.
+### Added
+
+- Orders API
+- PostgreSQL persistence with Prisma
+- Repository Pattern
+- Correlation ID generation
+- BullMQ payment queue
+- Payment worker
+- Fake Stripe adapter
+- Payments persistence
+- Integration logs
+- End-to-end order payment flow
