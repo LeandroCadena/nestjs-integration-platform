@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import type { Queue } from 'bullmq';
 
 import { PAYMENT_QUEUE, QUEUE_JOB_NAMES } from './queue.constants';
+import { PAYMENT_JOB_OPTIONS } from './queue.config';
 
 export interface ProcessPaymentJob {
   orderId: string;
@@ -17,14 +18,6 @@ export class QueueService {
   ) {}
 
   async addPaymentJob(data: ProcessPaymentJob): Promise<void> {
-    await this.paymentQueue.add(QUEUE_JOB_NAMES.PROCESS_PAYMENT, data, {
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 1000,
-      },
-      removeOnComplete: 100,
-      removeOnFail: false,
-    });
+    await this.paymentQueue.add(QUEUE_JOB_NAMES.PROCESS_PAYMENT, data, PAYMENT_JOB_OPTIONS);
   }
 }
